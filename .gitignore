@@ -1,0 +1,9 @@
+# Claude Code session state — not committed
+.claude/.turn-state.json
+.claude/.last_test
+.claude/.last_*_test
+.claude/.review/
+
+# OS
+.DS_Store
+Thumbs.db
