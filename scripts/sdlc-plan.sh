@@ -6,8 +6,8 @@
 # Used by the `sdlc-plan` skill. Pipe this into the advisor's prompt:
 #
 #   ./scripts/sdlc-plan.sh | pbcopy   # then paste as subagent input
-#   # or from an agent session, have the agent run this and use the
-#   # stdout as the Agent tool's prompt body.
+#   # or from an agent session, have the agent run this and pipe the
+#   # stdout into a subagent (in Claude Code: via your harness's subagent mechanism).
 #
 # Output structure:
 #   SECTION: repo state — branch, base ref
@@ -85,7 +85,7 @@ gate_id: linting
     cost: ~5s, zero tokens
 gate_id: adversarial-review
     always_required: false
-    command: launch an adversarial-posture code reviewer subagent via the Agent tool
+    command: launch an adversarial-posture code reviewer subagent via your harness's subagent mechanism
     catches: bugs a skeptical reviewer would find; bias toward blocking rather than approving
     cost: ~1-2min, structured JSON output
     applies_when: route handlers / middleware / models / migrations / auth / payment / service-layer contracts materially change
@@ -93,7 +93,7 @@ gate_id: adversarial-review
     note: pairs with silent-failure-audit for independent two-reviewer coverage on the same diff
 gate_id: silent-failure-audit
     always_required: false
-    command: launch a silent-failure-audit subagent via the Agent tool, then ./mark_reviewed.sh --tier heavy
+    command: launch a silent-failure-audit subagent via your harness's subagent mechanism, then ./mark_reviewed.sh --tier heavy
     catches: silent failures, error-handling gaps, inappropriate fallbacks
     cost: ~1-2min, 20-40k tokens
     applies_when: same criteria as adversarial-review — pairs with it for independent-reviewer coverage

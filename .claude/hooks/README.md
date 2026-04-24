@@ -2,7 +2,14 @@
 
 The files here are the hooks the floo team uses to gate agent behavior. They are **reference implementations**, not a framework. Copy what helps, delete what doesn't, tune the path patterns to your stack.
 
-All hooks are registered in `.claude/settings.json`. See that file for the wiring — or copy only the hooks you want and wire up the subset you need.
+## Harness target
+
+These hooks are wired for **Claude Code's hook lifecycle** (`Stop`, `PreToolUse`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`) and registered in `.claude/settings.json`. They read the `$CLAUDE_PROJECT_DIR` env var and hook-input JSON on stdin.
+
+If you run Codex, Cursor, or another harness:
+- The **sentinel logic** (`../lib/repo-state.sh`, `../../mark_reviewed.sh`) is pure Bash with no harness dependency. Works anywhere.
+- The **hook scripts** need a port: replace `$CLAUDE_PROJECT_DIR` with your harness's equivalent, adapt the hook-input parsing, and wire them into your harness's pre/post-tool lifecycle.
+- The **patterns** (self-review sentinel, heavy-review sentinel, tier classifier) are the parts worth copying even if the scripts aren't.
 
 ## What each hook does
 
@@ -33,7 +40,7 @@ Blocks `gh pr create` when the branch diff touches sensitive-tier files and no `
 Blocks direct edits to production code in the main workspace — forces the agent into a worktree on a feature branch. Exempt paths (docs, config, skills) can still be edited directly.
 
 ### `memory-guard.sh` — SessionStart
-Prints a warning at session start if files have accumulated in the Claude Code auto-memory directory. Encourages migration into the three-layer system (CLAUDE.md / skills / KB) rather than a hidden fourth layer.
+Prints a warning at session start if files have accumulated in Claude Code's auto-memory directory. Encourages migration into the three-layer system (AGENTS.md / skills / KB) rather than a hidden fourth layer. **Claude Code-specific** — skip or port if your harness uses a different memory mechanism.
 
 ## The tiered review pattern in one paragraph
 

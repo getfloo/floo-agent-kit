@@ -36,7 +36,7 @@ Deliberately:
 
 - **No language-specific skill.** Python / TypeScript / Rust behavior rules live in your project, not a generic kit. Write your own as you discover the patterns that matter for your stack.
 - **No deploy skill.** Deployment is so platform-specific that a generic version is close to useless.
-- **No project conventions skill.** Those belong in `CLAUDE.md`.
+- **No project conventions skill.** Those belong in `AGENTS.md`.
 
 The skills that ship here are the ones where the pattern transfers even when the stack doesn't.
 

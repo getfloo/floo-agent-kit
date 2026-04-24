@@ -36,7 +36,7 @@ The existing `pre-pr-check.sh` still gates sensitive-tier diffs on the `.heavy` 
 
 1. **Compute the diff surface.** `./scripts/sdlc-plan.sh` emits the branch diff (files + unified diff) and the gate catalog. The script is the single source of truth for both — don't hand-curate the diff in the agent, the script handles base-branch detection and truncation.
 
-2. **Spawn the advisor subagent.** Use the `Agent` tool with `subagent_type: general-purpose` and the prompt template below. Feed it the script's stdout.
+2. **Spawn the advisor subagent.** Use your harness's subagent mechanism (in Claude Code: the `Agent` tool with `subagent_type: general-purpose`). Feed it the script's stdout plus the prompt template below.
 
 3. **Parse the plan.** The subagent returns a JSON object on its last line:
     ```json

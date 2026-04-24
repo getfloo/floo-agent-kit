@@ -23,7 +23,7 @@ Run a structured security review against the current branch's diff.
    Source `.claude/lib/repo-state.sh` and use `classify_path` to identify sensitive-tier files. If no files in the diff are sensitive-tier, report that and exit without spawning a subagent — there's nothing to review.
 
 3. **Spawn the adversarial security auditor.**
-   Use the Agent tool with `subagent_type: general-purpose`. Prompt the subagent with the checklist from `.claude/skills/security-review/SKILL.md` plus the branch diff.
+   Use your harness's subagent mechanism (in Claude Code: the `Agent` tool with `subagent_type: general-purpose`). Prompt the subagent with the checklist from `.claude/skills/security-review/SKILL.md` plus the branch diff.
 
    Frame the subagent's role as **skeptical security auditor**. Its job is to find reasons the diff should NOT ship, not to rubber-stamp. The prompt should end with: *"Return a structured report in the output format defined in the SKILL.md. Be specific: file and line for every finding. Be honest: state PASS when a section looks clean."*
 

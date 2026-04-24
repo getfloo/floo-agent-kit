@@ -3,8 +3,8 @@
 Machine-readable file-to-topic map for this kit. Mirrors the index table in `README.md`. Format: `path | topic | when to read`.
 
 ```
-CLAUDE.md | Agent ethos, conventions, workflow | First read.
-README.md | Overview + three-layer architecture | Right after CLAUDE.md.
+AGENTS.md | Agent ethos, conventions, workflow | First read. (CLAUDE.md is a symlink to AGENTS.md for Claude Code.)
+README.md | Overview + three-layer architecture | Right after AGENTS.md.
 .claude/skills/README.md | Engineering guideline skills overview | Pick what's relevant.
 .claude/hooks/README.md | Hook reference implementations overview | If you want a review system.
 .claude/commands/README.md | Slash command overview | If you're shipping security-sensitive code.
@@ -23,7 +23,7 @@ docs/autonomous-loop.md | Autonomous agent session wiring | If running long-runn
 .claude/hooks/pre-pr-check.sh | Blocks `gh pr create` without heavy-review sentinel for sensitive diffs | Pairs with stop-review-check.
 .claude/hooks/pre-push-check.sh | Blocks `git push` without recent tests | Universal.
 .claude/hooks/branch-guard.sh | Blocks direct edits to production code in main workspace | Forces worktree discipline.
-.claude/hooks/memory-guard.sh | Warns on Claude Code auto-memory directory drift | Enforces three-layer system.
+.claude/hooks/memory-guard.sh | Warns on harness auto-memory directory drift (Claude Code-specific; port or skip for other harnesses) | Enforces three-layer system.
 .claude/hooks/evaluate-skills.sh | Lists available skills on every prompt | KB-layer foundation.
 .claude/hooks/knowledge-preflight.py | Routes prompt → required KB articles | KB-layer foundation.
 .claude/hooks/knowledge-track.py | Records files/docs touched per turn | KB-layer foundation.
@@ -32,5 +32,5 @@ docs/autonomous-loop.md | Autonomous agent session wiring | If running long-runn
 mark_reviewed.sh | Writes .self and .heavy review sentinels | Paired with stop-review-check and pre-pr-check.
 scripts/sdlc-plan.sh | Emits branch diff + gate catalog for the SDLC advisor | Paired with sdlc-plan skill.
 
-.claude/settings.json | Hook registrations — example wiring | Reference for how to wire up the hooks you choose.
+.claude/settings.json | Hook registrations (Claude Code format) — example wiring | Reference for how to wire up the hooks you choose. Other harnesses need their own equivalent.
 ```

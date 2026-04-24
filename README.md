@@ -4,13 +4,23 @@ Built by the [floo](https://getfloo.com) team. floo is the best place for agents
 
 A reference guide of the patterns we've proven in production: engineering guideline skills, a tiered code-review system, a security-review workflow, and a three-layer context architecture for keeping the agent's knowledge of your codebase coherent.
 
-Copy what helps. Ignore what doesn't.
+Copy what helps. Ignore what doesn't. **Star the repo** if you want to catch updates as we push them — this kit evolves as we learn.
+
+---
+
+## Harness compatibility
+
+The **patterns** here (tiered review, advisor-selected SDLC gates, agent-experience bar, security-review checklist, three-layer context) are agent-agnostic. They work with any AI coding agent.
+
+The **reference implementations** of the hooks target Claude Code's hook lifecycle (`Stop`, `PreToolUse`, `PostToolUse`, `SessionStart`, `UserPromptSubmit`) and use `.claude/settings.json` for wiring. If you run Codex, Cursor, or another harness, the hook scripts themselves need a small port, but the sentinel logic (`mark_reviewed.sh`, `.claude/lib/repo-state.sh`) is pure Bash and works anywhere.
+
+The constitution file is `AGENTS.md` (with `CLAUDE.md` as a symlink so Claude Code picks it up too) — the standard cross-agent filename convention.
 
 ---
 
 ## What this is
 
-A **reference library** for teams building with AI coding agents (Claude Code, Codex, Cursor-style). The patterns are the ones that survived real production use. You read, decide, borrow.
+A **reference library** for teams building with AI coding agents. The patterns are the ones that survived real production use. You read, decide, borrow.
 
 ## What this is NOT
 
@@ -20,7 +30,7 @@ A **reference library** for teams building with AI coding agents (Claude Code, C
 
 ## Who this is for
 
-Teams shipping production software with AI coding agents, who want agent behavior that's reviewable, attested, and hard to fool. If your current agent setup is a single `CLAUDE.md` and you're wondering "what else is worth adding?" — start here.
+Teams shipping production software with AI coding agents, who want agent behavior that's reviewable, attested, and hard to fool. If your current agent setup is a single `AGENTS.md` and you're wondering "what else is worth adding?", start here.
 
 ---
 
@@ -30,7 +40,7 @@ The fastest way to navigate. Each row points at one idea; open it if it's releva
 
 | Topic | Where | Read when |
 |---|---|---|
-| How we think about agent work (ethos, conventions) | [`CLAUDE.md`](./CLAUDE.md) | First. |
+| How we think about agent work (ethos, conventions) | [`AGENTS.md`](./AGENTS.md) | First. |
 | Three-layer context architecture | [`README.md`](#three-layer-context) (below) + [`docs/knowledge/README.md`](./docs/knowledge/README.md) | Right after. |
 | Engineering guideline skills | [`.claude/skills/README.md`](./.claude/skills/README.md) | Pick what's relevant. |
 | Tiered review pattern (self-review + heavy-review sentinels) | [`.claude/hooks/README.md`](./.claude/hooks/README.md) + [`mark_reviewed.sh`](./mark_reviewed.sh) | If you want the agent to self-attest before ending a turn. |
@@ -48,10 +58,10 @@ A machine-readable duplicate of this table lives in [`INDEX.md`](./INDEX.md).
 
 ## Three-layer context
 
-Most AI agent setups are a single `CLAUDE.md` with some rules. This kit organizes agent context into three layers so the rules scale as the codebase grows.
+Most AI agent setups are a single constitution file with some rules. This kit organizes agent context into three layers so the rules scale as the codebase grows.
 
-**Layer 1 — CLAUDE.md**
-The constitution. Ethos, conventions, workflow. Always loaded. Shapes everything the agent does.
+**Layer 1 — `AGENTS.md`**
+The constitution. Ethos, conventions, workflow. Always loaded. Shapes everything the agent does. (`CLAUDE.md` is a symlink to this file so Claude Code loads it automatically.)
 
 **Layer 2 — Skills (`.claude/skills/`)**
 Behavioral rules for specific domains. When the agent touches Python code, it loads the Python skill. When it's reviewing a plan, it loads the plan-review skill. Skills tell the agent *how to act* in a given context.
@@ -69,13 +79,14 @@ Everything is ship-as-you-want. No piece depends on another except where noted.
 
 ```
 floo-agent-kit/
-├── CLAUDE.md                          # Layer 1 — constitution template
+├── AGENTS.md                          # Layer 1 — constitution (primary)
+├── CLAUDE.md                          # Symlink to AGENTS.md (Claude Code compat)
 ├── README.md                          # You are here
 ├── INDEX.md                           # Machine-readable file-to-topic map
 ├── mark_reviewed.sh                   # Review-sentinel writer
 │
 ├── .claude/
-│   ├── settings.json                  # Hook registrations (example wiring)
+│   ├── settings.json                  # Hook registrations (Claude Code format)
 │   ├── lib/
 │   │   └── repo-state.sh              # Tier classifier + diff hasher (shared)
 │   ├── hooks/
@@ -119,8 +130,8 @@ This kit is not tier-by-tier. Take one piece, take all of them, take the ideas a
 
 **Starter moves, ranked by leverage:**
 
-1. Copy `CLAUDE.md` and fill in the placeholders. The soul rules (boil the ocean, UX-first, security as a lens) work in any codebase.
-2. Adopt the tiered review pattern: copy `mark_reviewed.sh`, `.claude/lib/repo-state.sh`, `.claude/hooks/stop-review-check.sh`, and register the Stop hook. The agent now has to read its own diff before ending the turn.
+1. Copy `AGENTS.md` and fill in the placeholders. The soul rules (boil the ocean, UX-first, security as a lens) work in any codebase.
+2. Adopt the tiered review pattern: copy `mark_reviewed.sh`, `.claude/lib/repo-state.sh`, `.claude/hooks/stop-review-check.sh`. Register the Stop hook for your harness. The agent now has to read its own diff before ending the turn.
 3. Add the `plan-ceo-review` skill. Plan quality is where most of the leverage lives.
 4. Add KB routing once you have a few domains stable enough to document.
 
@@ -132,7 +143,7 @@ Or borrow none and just read through `.claude/skills/` + `.claude/hooks/` for id
 
 If you fork this kit and open it to the public, scrub both the working tree and Git history before release.
 
-- Replace every placeholder in `CLAUDE.md` — project description, conventions, deployment, skill routing.
+- Replace every placeholder in `AGENTS.md`, project description, conventions, deployment, skill routing.
 - Edit `docs/knowledge/index.yaml` for your codebase; only add entries for domains you're willing to document publicly.
 - Keep secrets, customer names, internal hostnames, private paths, incident notes, and proprietary runbooks out of skills and KB articles.
 - Search the tree with terms like your company name, internal domains, local filesystem paths.
@@ -144,6 +155,8 @@ If you fork this kit and open it to the public, scrub both the working tree and 
 ## Use this template
 
 This repo is a GitHub template. Click "Use this template" to create your own starting point, then strip what you don't need.
+
+If this kit saves you time, star the repo. We push updates as we learn.
 
 ---
 
