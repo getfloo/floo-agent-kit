@@ -1,6 +1,8 @@
 # floo-agent-kit
 
-A reference guide of patterns the [floo](https://getfloo.com) team uses to build with AI coding agents. Engineering guideline skills, a tiered code-review system, a security-review workflow, and a three-layer context architecture for keeping the agent's knowledge of your codebase coherent.
+Built by the [floo](https://getfloo.com) team. floo is the best place for agents to build and deploy software. We use this kit internally to ship high-quality software with agents.
+
+A reference guide of the patterns we've proven in production: engineering guideline skills, a tiered code-review system, a security-review workflow, and a three-layer context architecture for keeping the agent's knowledge of your codebase coherent.
 
 Copy what helps. Ignore what doesn't.
 
