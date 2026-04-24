@@ -1,123 +1,147 @@
 # floo-agent-kit
 
-A scaffolding system for AI coding agents. Gives your agent persistent, context-aware memory of your codebase through a three-layer architecture: a CLAUDE.md/AGENTS.md constitution, domain-specific skills, and a knowledge base with hook-based routing.
+A reference guide of patterns the [floo](https://getfloo.com) team uses to build with AI coding agents. Engineering guideline skills, a tiered code-review system, a security-review workflow, and a three-layer context architecture for keeping the agent's knowledge of your codebase coherent.
 
-Built by the [floo](https://getfloo.com) team.
+Copy what helps. Ignore what doesn't.
 
 ---
 
-## What This Is
+## What this is
 
-Most AI agent setups are a flat CLAUDE.md with some rules. This goes further:
+A **reference library** for teams building with AI coding agents (Claude Code, Codex, Cursor-style). The patterns are the ones that survived real production use. You read, decide, borrow.
+
+## What this is NOT
+
+- Not a framework. No CLI, no `install` step, no runtime.
+- Not mandatory. Every piece is independently adoptable; the set is not all-or-nothing.
+- Not a substitute for your own thinking. The patterns scale across stacks; the specifics won't.
+
+## Who this is for
+
+Teams shipping production software with AI coding agents, who want agent behavior that's reviewable, attested, and hard to fool. If your current agent setup is a single `CLAUDE.md` and you're wondering "what else is worth adding?" — start here.
+
+---
+
+## Index — file → topic
+
+The fastest way to navigate. Each row points at one idea; open it if it's relevant.
+
+| Topic | Where | Read when |
+|---|---|---|
+| How we think about agent work (ethos, conventions) | [`CLAUDE.md`](./CLAUDE.md) | First. |
+| Three-layer context architecture | [`README.md`](#three-layer-context) (below) + [`docs/knowledge/README.md`](./docs/knowledge/README.md) | Right after. |
+| Engineering guideline skills | [`.claude/skills/README.md`](./.claude/skills/README.md) | Pick what's relevant. |
+| Tiered review pattern (self-review + heavy-review sentinels) | [`.claude/hooks/README.md`](./.claude/hooks/README.md) + [`mark_reviewed.sh`](./mark_reviewed.sh) | If you want the agent to self-attest before ending a turn. |
+| Slash commands (incl. `/security-review`) | [`.claude/commands/README.md`](./.claude/commands/README.md) | If you're shipping security-sensitive code. |
+| Plan-mode founder review | [`.claude/skills/plan-ceo-review/SKILL.md`](./.claude/skills/plan-ceo-review/SKILL.md) | When reviewing plans / designs. |
+| Advisor-selected SDLC gates | [`.claude/skills/sdlc-plan/SKILL.md`](./.claude/skills/sdlc-plan/SKILL.md) + [`scripts/sdlc-plan.sh`](./scripts/sdlc-plan.sh) | When every PR runs every check and you want it smarter. |
+| Agent-experience quality bar | [`.claude/skills/agent-experience-bar/SKILL.md`](./.claude/skills/agent-experience-bar/SKILL.md) | When building CLI / API surfaces agents will use. |
+| Security-review checklist | [`.claude/skills/security-review/SKILL.md`](./.claude/skills/security-review/SKILL.md) + [`.claude/commands/security-review.md`](./.claude/commands/security-review.md) | Before auth/middleware/schema changes ship. |
+| Autonomous agent loops | [`docs/autonomous-loop.md`](./docs/autonomous-loop.md) | If running long-running agent sessions. |
+| KB routing hooks | [`docs/knowledge/README.md`](./docs/knowledge/README.md) + [`.claude/hooks/knowledge-*.py`](./.claude/hooks) | If you want the agent to auto-read docs when touching mapped code. |
+
+A machine-readable duplicate of this table lives in [`INDEX.md`](./INDEX.md).
+
+---
+
+## Three-layer context
+
+Most AI agent setups are a single `CLAUDE.md` with some rules. This kit organizes agent context into three layers so the rules scale as the codebase grows.
 
 **Layer 1 — CLAUDE.md**
-The constitution. Ethos, conventions, workflow. Always loaded. Contains the rules that shape everything the agent does in your project.
+The constitution. Ethos, conventions, workflow. Always loaded. Shapes everything the agent does.
 
 **Layer 2 — Skills (`.claude/skills/`)**
-Behavioral rules for specific domains. When the agent touches Python code, it reads the Python skill. When it's about to deploy, it reads the deploy skill. Skills override general conventions for their domain. You write these for your stack — this kit doesn't include any, because the right rules depend entirely on what you're building.
+Behavioral rules for specific domains. When the agent touches Python code, it loads the Python skill. When it's reviewing a plan, it loads the plan-review skill. Skills tell the agent *how to act* in a given context.
 
 **Layer 3 — Knowledge Base (`docs/knowledge/`)**
-Canonical truth about how your system works. `index.yaml` maps code paths to KB articles. Before the agent edits a file, it reads the relevant article. After it edits, it's reminded to update the article if anything changed.
+Canonical truth about how your system actually works. An `index.yaml` maps code paths to articles; when the agent is about to edit a mapped file, a preflight hook routes it to the relevant article first. KB tells the agent *how things work*.
 
-The hooks wire all three layers together automatically.
+The hooks wire all three layers together. Skills + KB + hooks compose.
 
 ---
 
-## What's Included
+## What's included
 
-This kit ships Layer 1 (CLAUDE.md template) and Layer 3 (KB routing hooks + an empty starter index). Layer 2 is intentionally empty — you write skills for your own stack.
+Everything is ship-as-you-want. No piece depends on another except where noted.
 
 ```
 floo-agent-kit/
-├── CLAUDE.md                       # Template — fill in the placeholder sections
+├── CLAUDE.md                          # Layer 1 — constitution template
+├── README.md                          # You are here
+├── INDEX.md                           # Machine-readable file-to-topic map
+├── mark_reviewed.sh                   # Review-sentinel writer
+│
 ├── .claude/
-│   ├── settings.json               # Hook registration — copy and adapt
-│   └── hooks/
-│       ├── evaluate-skills.sh      # Lists available skills on every prompt
-│       ├── knowledge-preflight.py  # Routes prompt → required KB articles
-│       ├── knowledge-postflight.py # Reminds agent to update KB after code changes
-│       ├── knowledge-track.py      # Tracks files touched per turn
-│       └── pre-push-check.sh       # Blocks pushes without passing tests
+│   ├── settings.json                  # Hook registrations (example wiring)
+│   ├── lib/
+│   │   └── repo-state.sh              # Tier classifier + diff hasher (shared)
+│   ├── hooks/
+│   │   ├── README.md                  # What each hook does
+│   │   ├── evaluate-skills.sh         # Lists available skills per prompt
+│   │   ├── knowledge-preflight.py     # Routes prompt → required KB articles
+│   │   ├── knowledge-track.py         # Tracks files/docs touched per turn
+│   │   ├── knowledge-postflight.py    # Reminds agent to update KB after edits
+│   │   ├── pre-push-check.sh          # Blocks push without recent tests
+│   │   ├── stop-review-check.sh       # Blocks Stop without self-review
+│   │   ├── pre-pr-check.sh            # Blocks `gh pr create` without heavy review
+│   │   ├── branch-guard.sh            # Blocks direct edits to main workspace
+│   │   └── memory-guard.sh            # Warns on auto-memory directory drift
+│   ├── skills/
+│   │   ├── README.md
+│   │   ├── plan-ceo-review/           # Founder-mode plan critique
+│   │   ├── sdlc-plan/                 # Advisor-selected SDLC gates
+│   │   ├── agent-experience-bar/      # Product quality bar for agents
+│   │   └── security-review/           # Security checklist for a diff
+│   └── commands/
+│       ├── README.md
+│       └── security-review.md         # /security-review slash command
+│
+├── scripts/
+│   └── sdlc-plan.sh                   # Emits diff + gate catalog for advisor
+│
 └── docs/
-    ├── knowledge/
-    │   ├── index.yaml              # KB routing config — add entries for your codebase
-    │   └── README.md               # How to add entries and write KB articles
-    └── autonomous-loop.md          # How to wire up autonomous agent sessions
+    ├── autonomous-loop.md             # Wiring up autonomous agent sessions
+    └── knowledge/
+        ├── index.yaml                 # KB routing config (you fill this in)
+        └── README.md                  # How to add KB articles
 ```
 
-The hooks require Python 3 and Bash. Python code uses only the standard library, and no hook requires third-party packages.
+The hooks require Python 3 (stdlib only), Bash, and `jq`.
 
 ---
 
-## Adoption Tiers
+## Adoption, a la carte
 
-### Tier 1 — CLAUDE.md template (5 minutes, zero setup)
+This kit is not tier-by-tier. Take one piece, take all of them, take the ideas and write your own.
 
-Copy `CLAUDE.md` to your repo root. Fill in the placeholder sections. Done.
+**Starter moves, ranked by leverage:**
 
-The soul rules (boil the ocean, UX-first, security as a lens) work in any codebase. The project-specific sections are clearly marked as placeholders.
+1. Copy `CLAUDE.md` and fill in the placeholders. The soul rules (boil the ocean, UX-first, security as a lens) work in any codebase.
+2. Adopt the tiered review pattern: copy `mark_reviewed.sh`, `.claude/lib/repo-state.sh`, `.claude/hooks/stop-review-check.sh`, and register the Stop hook. The agent now has to read its own diff before ending the turn.
+3. Add the `plan-ceo-review` skill. Plan quality is where most of the leverage lives.
+4. Add KB routing once you have a few domains stable enough to document.
 
-### Tier 2 — KB routing (10-30 minutes)
-
-Add the knowledge base and routing hooks. The agent now reads canonical docs before touching mapped code.
-
-1. Copy `docs/knowledge/` to your repo
-2. Edit `docs/knowledge/index.yaml` — add entries for your actual codebase
-3. Write KB articles for your most complex domains (see `docs/knowledge/README.md` for the format)
-4. Copy `.claude/hooks/knowledge-preflight.py` and `.claude/hooks/knowledge-track.py`
-5. Register them in `.claude/settings.json` (copy the example in this repo)
-
-### Tier 3 — Full system (30-60 minutes)
-
-Everything in Tier 2, plus skills and the pre-push guard.
-
-1. Copy `.claude/hooks/knowledge-postflight.py` and `.claude/hooks/evaluate-skills.sh`, register both
-2. Copy `.claude/hooks/pre-push-check.sh` — edit `PRODUCTION_DIRS` and `TEST_COMMAND`, register it
-3. Write skills for your stack in `.claude/skills/` — one directory per domain, each with a `SKILL.md`
+Or borrow none and just read through `.claude/skills/` + `.claude/hooks/` for ideas.
 
 ---
 
-## The Hooks
+## Before adapting this into your own public repo
 
-| Hook | Trigger | What it does |
-|------|---------|-------------|
-| `evaluate-skills.sh` | Every prompt | Lists available skills so the agent knows what to invoke |
-| `knowledge-preflight.py` | Every prompt | Checks `index.yaml` and surfaces required reading based on prompt keywords |
-| `knowledge-track.py` | After every tool use | Tracks which files and docs were touched this turn |
-| `knowledge-postflight.py` | After code edits | Reminds the agent to update KB if mapped code was changed |
-| `pre-push-check.sh` | Before `git push` | Blocks pushes to main without tests; requires test sentinel |
+If you fork this kit and open it to the public, scrub both the working tree and Git history before release.
 
----
-
-## The CLAUDE.md Soul Rules
-
-Six rules in the template that shape how the agent approaches work:
-
-- **Boil the ocean** — take the full scope, don't leave follow-ups that fall out of understanding the problem
-- **Never offer small-option menus** — pick the best option and execute
-- **UX/DX/AX first** — every decision starts with what the user experiences
-- **Never be lazy** — ship code a distinguished engineer would be proud of
-- **Security is a lens** — adversarial thinking throughout, not at the end
-- **Ask important questions only** — don't ask before running tests; do ask before architecture decisions
-
----
-
-## GitHub Template
-
-This repo is a GitHub template. Click "Use this template" to create your own repo with this structure as a starting point.
-
----
-
-## Before Publishing Your Adapted Repo
-
-If you fork or adapt this kit into your own public repository, scrub both the working tree and Git history before release.
-
-- Replace every placeholder in `CLAUDE.md`, especially project description, deployment, conventions, and skill routing.
-- Add your own `docs/knowledge/index.yaml` entries only for domains you are comfortable documenting publicly.
+- Replace every placeholder in `CLAUDE.md` — project description, conventions, deployment, skill routing.
+- Edit `docs/knowledge/index.yaml` for your codebase; only add entries for domains you're willing to document publicly.
 - Keep secrets, customer names, internal hostnames, private paths, incident notes, and proprietary runbooks out of skills and KB articles.
-- Search the current tree with terms such as `secret`, `token`, `password`, your company name, internal domains, and local filesystem paths.
-- Check Git history too. Deleted files and old commit authors are still visible when an existing repository is made public.
+- Search the tree with terms like your company name, internal domains, local filesystem paths.
+- Check Git history too. Deleted files and old commit authors are still visible once a repo is public.
 - If history contains private material, publish from a fresh repository or rewrite history before opening access.
+
+---
+
+## Use this template
+
+This repo is a GitHub template. Click "Use this template" to create your own starting point, then strip what you don't need.
 
 ---
 

@@ -5,12 +5,14 @@
 **This repo uses a three-layer context system.**
 
 1. **CLAUDE.md (this file)** — ethos, conventions, workflow. Always loaded. This is the constitution.
-2. **Skills (`.claude/skills/`)** — behavioral rules for specific domains. Loaded when you touch that domain. Skills tell you HOW TO ACT. No skills are included in this template — add your own for your stack.
+2. **Skills (`.claude/skills/`)** — behavioral rules for specific domains. Loaded when you touch that domain. Skills tell you HOW TO ACT. A few starter skills ship in this kit (see Skill Routing below); add your own for your stack.
 3. **Knowledge base (`docs/knowledge/`)** — canonical truth about how the system works. Loaded via `docs/knowledge/index.yaml` routing. KB tells you HOW THINGS WORK.
 
 **Before editing any code:** check `docs/knowledge/index.yaml` for required reading. If the code you're touching maps to a KB article, read it first. If your change alters behavior, invariants, or contracts described in a KB article, update it in the same commit.
 
 **Before every commit:** run tests + lint. No exceptions.
+
+**Before ending a turn:** read your diff, confirm it's coherent, then run `./mark_reviewed.sh` to record the self-review attestation. The Stop hook blocks turn-end until you do. See the Agent Review System section below.
 
 ---
 
@@ -110,11 +112,45 @@ your-project/
 
 ## Skill Routing
 
-<!-- Add routing rules here once you've created skills in .claude/skills/. Example: -->
-<!--                                                                                  -->
-<!-- When the user's request matches an available skill, invoke it first.             -->
-<!--                                                                                  -->
-<!-- Key routing rules:                                                               -->
+When the user's request matches an available skill, ALWAYS invoke it using the Skill tool as your FIRST action. Do NOT answer directly, do NOT use other tools first. Skills have specialized workflows that produce better results than ad-hoc answers.
+
+Starter skills shipped in this kit:
+
+- Plan review, scope challenge, "is this the right approach" → invoke `plan-ceo-review`
+- Before `gh pr create`, when you want to know which gates this PR actually needs → invoke `sdlc-plan`
+- Product quality bar, CLI/dashboard/docs parity, launch readiness, agent-experience tradeoffs → invoke `agent-experience-bar`
+- Security review of the current branch diff → invoke `security-review` (or run `/security-review` as a slash command)
+
+Add your own skill routing rules as you write skills for your stack:
+
+<!-- Examples:                                                                         -->
 <!-- - Editing Python files → invoke python skill                                     -->
 <!-- - Shipping, deploying → invoke deploy skill                                      -->
-<!-- - QA, testing → invoke qa skill                                                  -->
+<!-- - Writing database migrations → invoke migrations skill                           -->
+
+---
+
+## Agent Review System
+
+This kit ships a tiered review pattern enforced by hooks.
+
+- **`./mark_reviewed.sh`** — records a self-review attestation for the current diff. Required before every Stop if any non-exempt code changed.
+- **`./mark_reviewed.sh --tier heavy`** — records a heavy-review attestation. Required before `gh pr create` on branches that touch sensitive-tier files (routes, models, schemas, migrations, auth, middleware — see `.claude/lib/repo-state.sh`).
+- **Heavy review** means running subagents on the diff: an adversarial code reviewer (skeptic posture) and a silent-failure auditor. Address findings, re-run tests, then mark.
+
+The hook chain:
+
+- `stop-review-check.sh` — blocks Stop without `.self` sentinel for non-exempt diffs
+- `pre-pr-check.sh` — blocks `gh pr create` without `.heavy` sentinel for sensitive diffs
+- `pre-push-check.sh` — blocks `git push` without recent test sentinel
+- `branch-guard.sh` — blocks direct production-code edits in main workspace (use a worktree)
+
+See `.claude/hooks/README.md` for details on each hook. Adopt the ones that fit your flow — the set is modular.
+
+---
+
+## Slash Commands
+
+- `/security-review` — run the security checklist against the current branch diff via a subagent. Before auth/middleware/schema changes ship.
+
+See `.claude/commands/README.md` for how to build your own.
