@@ -1,10 +1,6 @@
 # floo-agent-kit
 
-Built by the [floo](https://getfloo.com) team. floo is the best place for agents to build and deploy software. We use this kit internally to ship high-quality software with agents.
-
-A reference guide of the patterns we've proven in production: engineering guideline skills, a tiered code-review system, a security-review workflow, and a three-layer context architecture for keeping the agent's knowledge of your codebase coherent.
-
-**Take one piece, take a few, take all of it.** Nothing here is all-or-nothing — every skill, hook, and doctrine section is independently adoptable. Copy what helps, ignore what doesn't, adapt the rest. **Star the repo** if you want to catch updates as we push them; this kit evolves as we learn.
+Built by the [floo](https://getfloo.com) team — the patterns we use internally to ship production software with AI coding agents. Engineering skills, a tiered review system, a security workflow, and a three-layer context architecture for keeping the agent's knowledge of your codebase coherent.
 
 ---
 
@@ -39,6 +35,20 @@ Wait for me to approve before making any changes.
 ```
 
 The agent will read the kit, scan your repo, and come back with a ranked plan. You decide what to adopt; nothing changes until you say so.
+
+---
+
+## What's in the kit
+
+Every piece is independently adoptable. Take one, take a few, take all of it.
+
+- **The constitution** ([`AGENTS.md`](./AGENTS.md)) — ethos, conventions, and doctrine sections (PR shape, production-shape correctness, no half-built gates). The base layer that shapes everything the agent does.
+- **Engineering skills** ([`.claude/skills/`](./.claude/skills/)) — founder-mode plan review, advisor-selected SDLC gates, an agent-experience quality bar for product surfaces agents will use, and a structured security-review checklist.
+- **Tiered review system** ([`mark_reviewed.sh`](./mark_reviewed.sh) + [`REVIEW_GUIDE.md`](./.claude/REVIEW_GUIDE.md) + [hooks](./.claude/hooks/)) — content-addressable sentinels gate the agent: it can't end a turn without reading its diff, and can't open a sensitive PR without running heavy review.
+- **Knowledge base routing** ([`docs/knowledge/`](./docs/knowledge/) + [preflight hooks](./.claude/hooks/)) — `index.yaml` maps code paths to canonical docs; the agent reads the right article before touching mapped code.
+- **Slash commands** ([`.claude/commands/`](./.claude/commands/)) — reference `/security-review` workflow that runs the security checklist via a skeptic-role subagent.
+
+**Star the repo** to catch updates as the kit evolves.
 
 ---
 
