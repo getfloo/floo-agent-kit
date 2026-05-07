@@ -23,8 +23,8 @@ For **sensitive-tier** diffs, `pre-pr-check.sh` requires `.heavy` to hash-match 
 
 When a sensitive diff needs `.heavy`, kick the reviewer subagents off **concurrently** in a single message:
 
-1. Code-reviewer subagent (e.g. `pr-review-toolkit:code-reviewer` in Claude Code)
-2. Silent-failure-hunter subagent (e.g. `pr-review-toolkit:silent-failure-hunter`)
+1. A `code-reviewer` subagent (your harness's adversarial-reviewer agent)
+2. A `silent-failure-hunter` subagent (or equivalent — auditor for swallowed errors and inappropriate fallbacks)
 
 Two independent reviews on the same diff surface different issues. Running them serially wastes wall-clock for no reason — they don't interact. The doctrine is **always parallel.**
 
@@ -50,16 +50,19 @@ Product code outside the sensitive paths in Rule 3 → `gh pr create` proceeds w
 
 ### Rule 3 — sensitive-tier diffs (heavy review required)
 
-Sensitive paths (mirrored exactly in `.claude/lib/repo-state.sh` → `classify_path()`). Customize for your stack — these are illustrative starting points:
+Sensitive paths should be mirrored in `.claude/lib/repo-state.sh` → `classify_path()`. Customize for your stack — the kit ships an illustrative classifier that catches:
 
 - HTTP route / endpoint handlers (your contract with the outside world)
 - Data models, schemas, database migrations
 - Auth, session, token, encryption code
 - Reverse proxies, gateways, ingress middleware
-- Frontend API clients (wire protocol with backend)
-- CI workflow files (`.github/workflows/**`), `dependabot.yml`, `CODEOWNERS`
 
-The classifier is the source of truth — if you add a sensitive path, add it both to this list and to `classify_path()`.
+Other patterns worth promoting once you have the bandwidth (the kit's classifier doesn't promote these by default, but most production teams will want to):
+
+- Frontend API clients (wire protocol with backend)
+- CI workflow files (`.github/workflows/**`), `dependabot.yml`, `CODEOWNERS` — small files, big blast radius
+
+The classifier is the source of truth — if you add a sensitive path here, add it to `classify_path()` too.
 
 #### Rule 3a₀ — plan-stage review (advisory, BEFORE writing code)
 
@@ -87,8 +90,8 @@ After plan review passes, proceed to Rule 3a.
 
 ```
 PARALLEL:
-  Agent: code-reviewer subagent
-  Agent: silent-failure-hunter subagent
+  Agent: your code-reviewer subagent (skeptic posture)
+  Agent: your silent-failure-hunter subagent (audits swallowed errors)
 THEN:
   Address all findings, re-run tests.
   ./mark_reviewed.sh --tier heavy

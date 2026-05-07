@@ -102,7 +102,7 @@ Rules:
 7. `smoke-expand` required iff a new endpoint is added OR an endpoint's request/response shape changed. Not required for internal refactors.
 8. `design-review` required iff UI code (not just copy) changed.
 9. `security-review` required for: new admin endpoints, changes to auth/session/middleware, changes to security headers, changes to input validation.
-10. `secondary-family-review` recommended (default required) for: auth/middleware changes, schema migrations that touch existing data, payment flows, anything customer-facing that ships to prod. Default to skip for: refactors with no behavior change, internal tool changes, doc-only edits. The team must have a second-family CLI configured (see `.claude/REVIEW_GUIDE.md`); if not, mark this gate skipped with rationale "no second-family reviewer wired."
+10. `secondary-family-review` — only applicable when the team has a second-family CLI wired (see `.claude/REVIEW_GUIDE.md` → "Adding a second-reviewer family"). If wired, default to required for: auth/middleware changes, schema migrations that touch existing data, payment flows, anything customer-facing that ships to prod; default to skip for refactors with no behavior change, internal tool changes, doc-only edits. If no second family is wired, mark this gate skipped with rationale "no second-family reviewer configured" — don't fail the PR for a tool the team hasn't set up.
 
 Output a single JSON object on your FINAL line. No markdown fencing. Provide a brief rationale for every gate, whether required or skipped — future incident investigators read this. Be honest: if you're uncertain, say so and err toward the heavier set.
 
