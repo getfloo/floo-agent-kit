@@ -4,7 +4,41 @@ Built by the [floo](https://getfloo.com) team. floo is the best place for agents
 
 A reference guide of the patterns we've proven in production: engineering guideline skills, a tiered code-review system, a security-review workflow, and a three-layer context architecture for keeping the agent's knowledge of your codebase coherent.
 
-Copy what helps. Ignore what doesn't. **Star the repo** if you want to catch updates as we push them — this kit evolves as we learn.
+**Take one piece, take a few, take all of it.** Nothing here is all-or-nothing — every skill, hook, and doctrine section is independently adoptable. Copy what helps, ignore what doesn't, adapt the rest. **Star the repo** if you want to catch updates as we push them; this kit evolves as we learn.
+
+---
+
+## Apply this to your repo
+
+Open your coding agent in the root of the repo you want to upgrade, and paste this prompt. Most of the kit (skills, doctrine, three-layer context) is agent-agnostic, but the hook reference implementations target Claude Code's hook lifecycle — other harnesses don't expose hooks the same way, so those pieces will need a port (see "Harness compatibility" below).
+
+```text
+Read the floo-agent-kit at https://github.com/getfloo/floo-agent-kit — start
+with its README.md, AGENTS.md, and INDEX.md, then skim .claude/skills/,
+.claude/hooks/, and .claude/lib/.
+
+Then look at MY repo: what's already in AGENTS.md / CLAUDE.md (if anything),
+what hooks exist under .claude/ (if any), what review and test setup is in
+place, what the stack is, and which paths are sensitive (auth, routes,
+schemas, migrations, deploy pipeline).
+
+Produce a written plan — no edits yet — ranked by leverage, of which kit
+pieces are worth adopting here and how each one would adapt to this
+codebase. For each recommendation:
+
+- name the kit file
+- one-sentence summary of what it does
+- WHY it's worth adopting, given what you saw in my repo
+- the specific adaptation (path patterns to change, hook commands to swap
+  in, doctrine to drop or rewrite)
+
+Also flag pieces NOT worth adopting — already covered, doesn't fit the
+stack, or too heavy for the team's current size.
+
+Wait for me to approve before making any changes.
+```
+
+The agent will read the kit, scan your repo, and come back with a ranked plan. You decide what to adopt; nothing changes until you say so.
 
 ---
 

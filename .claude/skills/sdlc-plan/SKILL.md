@@ -70,6 +70,7 @@ Customize this list for your stack. The exact gates you ship depends on your tes
 | `linting` | yes | style, common bug classes | every PR |
 | `adversarial-review` | no | bugs a skeptical reviewer would find | routes, middleware, models, migrations, auth, payment, service contracts |
 | `silent-failure-audit` | no | swallowed errors, inappropriate fallbacks | pairs with `adversarial-review` — two independent reviews on the same diff |
+| `secondary-family-review` | no | bugs the primary model family is biased to miss | sensitive diffs where the cost of a missed bug warrants ~5 min wall-clock — auth, migrations, payment flows, anything customer-facing |
 | `migration-rehearsal` | no | migrations that fail on prod-shaped data | any migration file added or modified |
 | `contract-snapshot` | no | accidental route-shape drift | route or schema files modified |
 | `smoke-expand` | no | bugs in endpoints that unit-test mocks miss | new endpoint added or request/response shape changed |
@@ -77,6 +78,10 @@ Customize this list for your stack. The exact gates you ship depends on your tes
 | `security-review` | no | auth bypasses, input validation gaps, CSP gaps | new admin endpoints, changes to auth/session/middleware, security-header changes |
 
 **Pair `adversarial-review` + `silent-failure-audit` intentionally.** They run in parallel, on the same diff, as two subagents with different roles. Independent reviews surface different issues — both returning "approve" is a stronger signal than either one alone.
+
+**Always run gate subagents in parallel, never serially.** Even with just the two reviewers above, kicking them off in a single message saves wall-clock for no engineering cost — they don't interact. If you add a `secondary-family-review`, the cost asymmetry is worse: most cross-family CLIs take 4–6 minutes vs. 30–90 seconds for inline subagents. Run them concurrently as backgrounded calls; address findings together.
+
+**Add a second-reviewer family when the cost of a missed bug warrants it.** Two reviewers from the same model family share priors and miss the same things by definition. Adding a reviewer from a *different* family (Claude + GPT-* via Codex CLI, Claude + Gemini CLI, etc.) catches an uncorrelated set of bugs — and if you wire it through `mark_reviewed.sh --tier secondary` (see `.claude/REVIEW_GUIDE.md` → "Adding a second-reviewer family"), the sentinel is verified-not-self-reported.
 
 ---
 
@@ -97,6 +102,7 @@ Rules:
 7. `smoke-expand` required iff a new endpoint is added OR an endpoint's request/response shape changed. Not required for internal refactors.
 8. `design-review` required iff UI code (not just copy) changed.
 9. `security-review` required for: new admin endpoints, changes to auth/session/middleware, changes to security headers, changes to input validation.
+10. `secondary-family-review` recommended (default required) for: auth/middleware changes, schema migrations that touch existing data, payment flows, anything customer-facing that ships to prod. Default to skip for: refactors with no behavior change, internal tool changes, doc-only edits. The team must have a second-family CLI configured (see `.claude/REVIEW_GUIDE.md`); if not, mark this gate skipped with rationale "no second-family reviewer wired."
 
 Output a single JSON object on your FINAL line. No markdown fencing. Provide a brief rationale for every gate, whether required or skipped — future incident investigators read this. Be honest: if you're uncertain, say so and err toward the heavier set.
 
