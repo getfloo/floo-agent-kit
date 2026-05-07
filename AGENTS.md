@@ -82,6 +82,120 @@ Before pushing: run your test suite. The pre-push hook enforces this.
 
 ---
 
+## PR shape: smaller PRs, not smaller thinking
+
+The plan can be big. The PR should be reviewable, deployable, and mechanically verified. Agents can produce a 2,000-line diff before a human has finished coffee — and a reviewer (human or agent) on a 2,000-line diff stops finding bugs and starts summarizing intent. That's the failure mode small PRs prevent. Doctrine adapted from Google's Small CLs guidance and GitHub's review docs, sharpened for an agent-driven SDLC.
+
+**Every PR should be the smallest complete, reviewable, deployable unit of value.**
+
+**Target shape:**
+- One user-visible behavior or one internal invariant per PR.
+- Tests ship in the **same PR** as the behavior. Never "tests coming later."
+- Doc / KB / skill updates ship in the **same PR** as the behavior change.
+- Every PR is green and deployable on its own. No "half a feature that only works after PR 4 lands" unless explicitly hidden behind a flag or inert scaffold.
+
+**Size guidance (meaningful changed lines, excluding generated files, lockfiles, snapshots):**
+- ≤ ~400 lines: ideal.
+- 400–800 lines: fine if it's one coherent vertical slice.
+- > 800 lines or > ~12 files touched: needs a PR plan up-front; default to splitting.
+- Mechanical refactors, generated files, lockfiles, formatting: **isolate from behavior changes.** A rename + a behavior change in one PR is two PRs disguised as one.
+
+**Good splits (vertical slices):**
+- PR 1: additive schema / model change, no behavior change.
+- PR 2: backend behavior + tests.
+- PR 3: client surface (CLI, dashboard, SDK) + tests.
+- PR 4: cleanup / deprecation removal.
+- PR 5: docs / external positioning if customer-facing.
+
+**Bad splits (don't do):**
+- Backend without tests, "tests coming later."
+- API change without client update.
+- Migration that breaks old code (without flag or fallback).
+- Client surface that depends on an unmerged backend.
+- Six PRs where no single PR is understandable alone.
+
+**PR body template:**
+
+```markdown
+## What changed
+## Why
+## Risk tier            (exempt | standard | sensitive — match classify_path)
+## Files reviewers should scrutinize
+## Tests run
+## Known non-goals
+```
+
+**The trap to avoid:** a too-small PR that hides the design. The doctrine isn't "ship the smallest possible diff" — it's "every PR is the smallest *complete* unit of value." A PR shipping a new helper without the existing callers becoming wrappers, the tests, and the doc is an incomplete unit; ship the whole vertical slice even if it's 800 lines.
+
+---
+
+## Production-shape correctness
+
+A test that runs against an in-memory DB + mocked external services + clean fixture data passes; the same code path against a real Postgres + real third-party tokens + production-shaped data fails. That gap is the most expensive class of bug an agent-driven SDLC ships, because it survives every fast-test gate and only fires in production. The rules below are the gap-closers we've found load-bearing.
+
+### Schema and data migrations
+
+Migrations are the highest-stakes class of change in any repo: irreversible by design, blocking every deploy behind them when they fail. An in-memory or alternative-dialect DB is insufficient — different type system, different constraint enforcement, no historical-data fixtures.
+
+1. **Every migration is run against a real instance of the production-shape DB before merge.** Until pre-merge CI does this automatically, the burden is on the author: run the migration locally against a DB seeded with a prod-shaped row sample, and record the command + output in the PR description.
+
+2. **Adding a CHECK / NOT NULL / UNIQUE constraint over an existing table requires explicit handling of historical rows.** Pick one — and write which one in the migration's docstring:
+   - Prove existing data already satisfies the constraint (query + count in the PR description).
+   - Use the DB's "validate later" form (`NOT VALID` in Postgres; equivalent elsewhere) and follow up with a separate validate-constraint migration once those rows are reconciled.
+   - Backfill bad rows in the same migration, *before* the constraint statement.
+
+   **Read your own diff.** If the migration would reject a row your docstring describes, the migration is broken.
+
+3. **JSON / JSONB / VARCHAR / cross-dialect coercions are landmines.** Different DB engines (and different ORM layers) tokenize and coerce these differently. **Bind typed parameters via your ORM's typed-param mechanism** rather than hand-rolling SQL casts. Let the ORM serialize per-dialect.
+
+### Boundary contracts (auth, third-party tokens, external APIs)
+
+When an external system owns the payload shape:
+
+1. **Test what the spec guarantees, not what your fixture happens to have.** A typical OAuth/OIDC access token has required claims (`sub`, `iss`, `exp`) and optional claims (`aud`, `email`, `sid`). A mock token that always includes the optional claims proves nothing about the validator's behavior on real tokens that don't. Write tests for *both* presence and absence.
+
+2. **Don't strict-validate optional claims.** If a third party can change token shape over time, reject only what you can prove is wrong. Validate required claims always; check optional claims only if present. A single line that strict-validates an optional claim can break every login overnight when the upstream stops emitting it.
+
+3. **Severity discipline.** Per-attempt failures of a critical user flow log at `ERROR`, not `WARNING`. Most error-tracking integrations capture `ERROR+` by default. A single user's normal session expiry is `WARNING`. "Every login is failing the same way" is `ERROR` — and "every X is failing the same way" must page someone, not sit silent.
+
+### Operational tooling that mutates production state
+
+Any one-shot reconciler, classifier, IAM revocation, or migration script that touches prod state is one config typo away from an outage. Three rules:
+
+1. **Default to dry-run.** Any one-shot operational tool that mutates production state must have a dry-run mode that prints the full set of resources it would touch, with no side effects. Dry-run is the *default*; an explicit `--apply` (or equivalent) is required to mutate.
+
+2. **Test the classifier exhaustively before first prod run.** Any function that decides "in scope vs. out of scope" needs unit tests enumerating every realistic resource-name pattern that exists in production today — including bare-name variants, hyphenated env variants, and edge-case names. The most damaging ops-tooling outages are caused by a one-character classifier bug that passed all the tests because the tests didn't cover the production naming variant.
+
+3. **Pre-flight checklist before first prod apply.** Before running an operational tool against prod for the first time, the operator (human or agent) must answer in writing:
+   - What's the input set?
+   - What does dry-run say it will do?
+   - What's the worst-case scenario if the classifier is wrong?
+   - What's the recovery path?
+   - Is the recovery path automatable, or does it require manual cloud-console commands?
+
+   If the recovery is "manual cloud-console," the tool needs an inverse reconciler before its first run.
+
+### Post-incident closure
+
+When an incident happens, two things must land in the same week before the incident is "over":
+
+1. A test that would have caught the specific bug (regression guard).
+2. A doctrine entry — in this file, in a skill, or in a KB article — that would have prevented the *pattern*.
+
+If only (1) lands, the next variant of the same pattern still ships. If only (2) lands, there's no proof the pattern actually got addressed. Both, or it's not closed.
+
+---
+
+## No half-built gates
+
+A workflow that references a secret or variable must have that secret provisioned in the same PR that lands the reference, or the workflow doesn't exist. There is no allowlist, no "we'll provision before declaring it live" comment, no skip-with-warning fallback that pretends the gate exists when it doesn't.
+
+A gate is either fully wired — provisioned + tested + alerting on real failures — or it is deleted.
+
+Half-built gates are worse than missing gates: they consume cognitive bandwidth, log-noise budget, and reader trust without producing a single bit of signal. When a feature comes back later, it lands as one atomic PR with the secret, the wiring, the alert, and a real assertion that the gate fires when it should.
+
+---
+
 ## Knowledge Base
 
 `docs/knowledge/` is the canonical truth about how the system works.
@@ -135,11 +249,11 @@ Add your own skill routing rules as you write skills for your stack:
 
 ## Agent Review System
 
-This kit ships a tiered review pattern enforced by hooks.
+This kit ships a tiered review pattern enforced by hooks. **`.claude/REVIEW_GUIDE.md` is the single source of truth for the decision tree** — read it before opening a sensitive PR; don't reconstruct the rules from this summary.
 
 - **`./mark_reviewed.sh`** — records a self-review attestation for the current diff. Required before every Stop if any non-exempt code changed.
 - **`./mark_reviewed.sh --tier heavy`** — records a heavy-review attestation. Required before `gh pr create` on branches that touch sensitive-tier files (routes, models, schemas, migrations, auth, middleware — see `.claude/lib/repo-state.sh`).
-- **Heavy review** means running subagents on the diff: an adversarial code reviewer (skeptic posture) and a silent-failure auditor. Address findings, re-run tests, then mark.
+- **Heavy review** means running subagents on the diff in parallel: an adversarial code reviewer (skeptic posture) and a silent-failure auditor. Address findings, re-run tests, then mark.
 
 The hook chain:
 
@@ -148,7 +262,7 @@ The hook chain:
 - `pre-push-check.sh` — blocks `git push` without recent test sentinel
 - `branch-guard.sh` — blocks direct production-code edits in main workspace (use a worktree)
 
-See `.claude/hooks/README.md` for details on each hook. Adopt the ones that fit your flow — the set is modular.
+See `.claude/hooks/README.md` for hook implementation details. `.claude/REVIEW_GUIDE.md` covers the policy: when each tier applies, the parallel-reviewers doctrine, plan-stage review for non-trivial sensitive work, the rereview-vs-full shape rule, and optional upgrade paths (second-reviewer family, rereview tiers).
 
 ---
 

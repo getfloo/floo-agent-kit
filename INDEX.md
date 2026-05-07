@@ -18,6 +18,7 @@ docs/autonomous-loop.md | Autonomous agent session wiring | If running long-runn
 
 .claude/commands/security-review.md | /security-review slash command — runs the security checklist via a subagent | User-triggered workflow.
 
+.claude/REVIEW_GUIDE.md | Single source of truth for the pre-PR review policy | Read before opening a sensitive PR. Covers the decision tree, parallel-reviewers doctrine, plan-stage review, rereview-vs-full shape rule, and optional upgrade paths.
 .claude/lib/repo-state.sh | Tier classifier + content-addressable diff hasher | Shared library for the review hooks.
 .claude/hooks/stop-review-check.sh | Blocks Stop without self-review sentinel | Core of the tiered review pattern.
 .claude/hooks/pre-pr-check.sh | Blocks `gh pr create` without heavy-review sentinel for sensitive diffs | Pairs with stop-review-check.
